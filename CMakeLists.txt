@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.7)
+cmake_minimum_required(VERSION 3.1)
 
 set(CMAKE_CXX_FLAGS "-std=c++11 -Wall")
 
@@ -14,4 +14,5 @@ add_custom_target(deploy_OrdersService ${CMAKE_SOURCE_DIR}/deploy.sh ${CMAKE_SOU
 
 include_directories(.)
 
+add_subdirectory(db)
 add_subdirectory(tests)

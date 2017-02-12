@@ -98,8 +98,8 @@ private:
         }
     }
 private:
+    fastcgi::Logger *logger_;
     std::unique_ptr<JSONRequestHandler> handlers_;
-	fastcgi::Logger *logger_;
 };
 
 FCGIDAEMON_REGISTER_FACTORIES_BEGIN()
