@@ -4,21 +4,31 @@
     <pool name="main" threads="8" queue="10000"/>
 </pools>
 <handlers>
-    <handler pool="main" url="/simple_res">
+    <handler pool="main" url="/sleepService">
         <component name="csleepService"/>
+    </handler>
+    <!--TODO order no regexp-->
+    <handler pool="main" url="/orders(/([0-9a-f]{24})([0-9a-f]{14})?)?">
+        <component name="orders"/>
     </handler>
 </handlers>
 <components>
+    <component name="orders" type="ordersService:OrdersService_factory">
+        <logger>daemon-logger</logger>
+    </component>
+
 	<component name="csleepService" type="csleepService_module:sleepService_factory">
 		<logger>daemon-logger</logger>
 	</component>
+
     <component name="daemon-logger" type="logger:logger">
-       <level>INFO</level>
-       <ident>fastcgi-test</ident>
+       <level>DEBUG</level>
+       <ident>taxi</ident>
     </component>
 </components>
 <modules>
     <module name="csleepService_module" path="/usr/local/lib/fastcgi2/dev/libsleepService.so"/>
+    <module name="ordersService" path="/usr/local/lib/fastcgi2/dev/libordersService.so"/>
     <module name="logger" path="/usr/local/lib/fastcgi2/fastcgi2-syslog.so"/>
 </modules>
 <daemon>
