@@ -12,9 +12,9 @@ public:
     virtual void initializeConnection();
     virtual Order createOrder();
     virtual Order createOrder(const std::string& userId, const std::string& promoId);
-    virtual Order getOrder(const OrderId& orderId);
-    virtual void cancelOrder(const OrderId& orderId);
-    virtual void successOrder(const OrderId& orderId);
+    virtual Order getOrder(const std::string& orderId);
+    virtual void cancelOrder(const std::string& orderId);
+    virtual void successOrder(const std::string& orderId);
 
     virtual ~OrdersRepositoryMongoDB() { ; }
 private:

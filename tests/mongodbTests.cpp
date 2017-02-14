@@ -4,49 +4,76 @@
 #include <mongocxx/uri.hpp>
 #include <mongocxx/instance.hpp>
 #include <mongocxx/client.hpp>
+#include <db/OrdersRepositoryMongoDB.h>
 
 using namespace mongocxx;
 using namespace bsoncxx;
+using namespace bsoncxx::types;
 
 instance inst{};
 
 class MongoDBTest : public ::testing::Test {
 protected:
-  virtual void SetUp() {
-		dbClient = client(uri{});
-    db = dbClient["taxiTestDB"];
-		db.drop();
+    MongoDBTest() {
+        dbClient = client(uri{});
+        db = dbClient["taxiTestDB"];
+    }
 
-		users = db["users"];
-		orders = db["orders"];
-		promos = db["promos"];
-  }
+    virtual void SetUp() {
+        db.drop();
+        users = db["users"];
+        orders = db["orders"];
+        promos = db["promos"];
+        usersIds.clear();
+        promosIds.clear();
+    }
 
-	types::b_oid addPromo(unsigned count, unsigned perUserCount) {
-		auto builder = bsoncxx::builder::stream::document{};
-		document::value documentValue = builder << builder::stream::finalize;
-	}
+    oid addPromo(int32_t count, int32_t perUserCount) {
+        auto builder = bsoncxx::builder::stream::document{};
+        document::value documentValue =
+                builder << "count" << count
+                        << "perUserCount" << perUserCount
+                        << "lockedCount" << 0
+                        << "orders" << builder::stream::open_array << builder::stream::close_array
+                        << "users" << builder::stream::open_array << builder::stream::close_array
+                        << builder::stream::finalize;
+        result::insert_one r = promos.insert_one(documentValue.view()).value();
+        return r.inserted_id().get_oid().value;
+    }
+
+    oid addUser() {
+        auto builder = bsoncxx::builder::stream::document{};
+        document::value documentValue = builder << builder::stream::finalize;
+        result::insert_one r = users.insert_one(documentValue.view()).value();
+        usersIds.push_back(r.inserted_id().get_oid());
+        return r.inserted_id().get_oid().value;
+    }
 protected:
-	collection users;
+    collection users;
 	collection orders;
 	collection promos;
-  client dbClient;
-  database db;
+    client dbClient;
+    database db;
+    std::vector<b_oid> usersIds;
+    std::vector<b_oid> promosIds;
 };
 
-
-
 TEST_F(MongoDBTest, Basic) {
-	auto builder = bsoncxx::builder::stream::document{};
-	document::value documentValue = builder << builder::stream::finalize;
-
-
 	try {
-		result::insert_one r = users.insert_one(documentValue.view()).value();
+		/*result::insert_one r = users.insert_one(documentValue.view()).value();
 		result::insert_one r2 = orders.insert_one(documentValue.view()).value();
-		types::b_oid oid = r.inserted_id().get_oid();
+		types::b_oid oid = r.inserted_id().get_oid();*/
+        auto u = addUser();
+        auto p = addPromo(10, 2);
+        OrdersRepositoryMongoDB db("taxiTestDB");
+
+        db.initializeConnection();
+        db.createOrder(u.to_string(), p.to_string());
+        //std::cout << p.to_string();
 	} catch (const std::logic_error& e) {
 		//TODO Here
+        std::cout << e.what() << std::endl;
+        throw;
 	}
 
 

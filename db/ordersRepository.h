@@ -1,12 +1,27 @@
 #pragma once
 
-using OrderId = std::string;
-using UserId = std::string;
-using PromoId = std::string;
-
-//TODO mock class
 class Order {
+public:
+    Order(const std::string& id, const std::string& userId, const std::string& promoId) :
+            id_(id),
+            userId_(userId),
+            promoId_(promoId),
+            promoUsed_(true) { ; }
+    Order(const std::string& id) :
+            id_(id),
+            userId_(),
+            promoId_(),
+            promoUsed_(false) { ; }
 
+    std::string getId() const noexcept { return id_; }
+    std::string getUserId(std::string& userId) const noexcept { return id_; }
+    std::string getPromoId(std::string& promoId) const noexcept { return promoId_; }
+    bool isPromoUsed() const noexcept { return promoUsed_; }
+private:
+    std::string id_;
+    std::string userId_;
+    std::string promoId_;
+    bool promoUsed_;
 };
 
 class OrdersRepository {
@@ -19,10 +34,10 @@ public:
 
     virtual void initializeConnection() = 0;
     virtual Order createOrder() = 0;
-    virtual Order createOrder(const UserId& userId, const PromoId& promoId) = 0;
-    virtual Order getOrder(const OrderId& orderId) = 0;
-    virtual void cancelOrder(const OrderId& orderId) = 0;
-    virtual void successOrder(const OrderId& orderId) = 0;
+    virtual Order createOrder(const std::string& userId, const std::string& promoId) = 0;
+    virtual Order getOrder(const std::string& orderId) = 0;
+    virtual void cancelOrder(const std::string& orderId) = 0;
+    virtual void successOrder(const std::string& orderId) = 0;
 
     virtual ~OrdersRepository() { ; }
 };
