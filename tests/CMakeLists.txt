@@ -10,7 +10,7 @@ pkg_check_modules(MONGOCXX REQUIRED libmongocxx)
 
 include_directories(${MONGOCXX_INCLUDE_DIRS})
 
-add_executable(mongodbTests mongodbTests.cpp)
+add_executable(mongodbTests mongodb/OrdersSimpleRequestsTests.cpp mongodb/OrdersRepositoryTests.cpp)
 target_link_libraries(mongodbTests ordersRepositoryMongoDB gtest gtest_main pthread)
 
 

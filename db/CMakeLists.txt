@@ -6,5 +6,6 @@ pkg_check_modules(MONGOCXX REQUIRED libmongocxx)
 
 include_directories(${MONGOCXX_INCLUDE_DIRS})
 
-add_library(ordersRepositoryMongoDB OrdersRepositoryMongoDB.cpp)
+add_library(ordersRepositoryMongoDB mongodb/ordersRepositoryMongoDB.cpp
+                                    mongodb/ordersSimpleRequests.cpp)
 target_link_libraries(ordersRepositoryMongoDB ${MONGOCXX_LIBRARIES})
