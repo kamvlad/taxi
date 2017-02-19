@@ -1,3 +1,4 @@
+#include <thread>
 #include <gtest/gtest.h>
 #include <bsoncxx/json.hpp>
 #include <mongocxx/stdx.hpp>
@@ -13,7 +14,7 @@ using namespace bsoncxx;
 
 class OrdersRepositoryConcurrentTests : public ::testing::Test {
 protected:
-  OrdersRepositoryTests() : dbName("taxiTestDB") {
+  OrdersRepositoryConcurrentTests() : dbName("taxiTestDB") {
     dbClient = client(uri{});
     db = dbClient[dbName];
   }
@@ -49,7 +50,19 @@ protected:
   std::string user2;
 };
 
+void func(OrdersRepositoryMongoDB* orders, const std::string& userId, const std::string& promoId) {
+  for (int i = 0; i < 1000; ++i) {
+    auto order = orders->createOrder(userId, promoId);
+    orders->getOrder(order.getId());
+    orders->cancelOrder(order.getId());
+  }
+}
+
 //TODO Finish it
-TEST_F(OrdersRepositoryTests, createOrderWithPromo) {
-  ;
+TEST_F(OrdersRepositoryConcurrentTests, createOrderWithPromo) {
+  std::thread a(func, orders.get(), user1, promo1);
+  std::thread b(func, orders.get(), user2, promo1);
+
+  a.join();
+  b.join();
 }

@@ -20,6 +20,7 @@ TEST(JSONPresentation, MalformedJSON) {
 
   try {
     converter.fromString("foobar}{");
+    FAIL();
   } catch (const std::exception& ) {
 
   }

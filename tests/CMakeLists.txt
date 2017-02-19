@@ -13,7 +13,6 @@ include_directories(${MONGOCXX_INCLUDE_DIRS})
 add_executable(mongodbTests mongodb/OrdersSimpleRequestsTests.cpp mongodb/OrdersRepositoryTests.cpp)
 target_link_libraries(mongodbTests ordersRepositoryMongoDB gtest gtest_main pthread)
 
-
-#add_definitions("-fsanitize=thread")
-#add_executable(concTests concTest.cpp)
-#target_link_libraries(concTests tsan gtest gtest_main pthread)
+add_executable(OrdersRepositoryConcurrentTests mongodb/OrdersRepositoryConcurrentTests.cpp)
+target_link_libraries(OrdersRepositoryConcurrentTests tsan ordersRepositoryMongoDB gtest gtest_main pthread)
+target_compile_options(OrdersRepositoryConcurrentTests PUBLIC "-fsanitize=thread")

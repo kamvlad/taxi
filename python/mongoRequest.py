@@ -134,28 +134,5 @@ def main():
     print(db.promos.create_index([('orders._id', pymongo.ASCENDING)], unique=True))
     createLargeDataset(db)
 
-#    userId1 = addUser(db)
-#    userId2 = addUser(db)
-#    promoId = addPromoCode(db, 3, 3)
-
-
-
-    #print removeOrder(db, promoId, )
-    #orderId = createOrderWithPromo(db, userId1, promoId)
-    #orderId = createOrderWithPromo(db, userId2, promoId)
-    #orderId = createOrderWithPromo(db, userId1, promoId)
-
-    #print(getOrderStatus(db, promoId, orderId))
-
-    #print(successOrder(db, promoId, orderId, userId1).matched_count)
-    #print(removeOrder(db, promoId, orderId, userId1))
-
-
-    # print(createOrderWithPromo(db, userId1, promoId))
-    # print(createOrderWithPromo(db, userId1, promoId))
-    # print(createOrderWithPromo(db, userId2, promoId))
-    # print(createOrderWithPromo(db, userId2, promoId))
-
-
 if __name__ == '__main__':
     main()
