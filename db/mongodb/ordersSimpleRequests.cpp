@@ -26,7 +26,7 @@ oid OrdersSimpleRequests::addUser(Collection &users) const {
   return r.inserted_id().get_oid().value;
 }
 
-PromoInfo OrdersSimpleRequests::getPromoCountPerUser(Collection &promos, const oid &promoId) const {
+PromoInfo OrdersSimpleRequests::getPromoInfo(Collection &promos, const oid &promoId) const {
   Document request =
           Builder{} << "_id" << promoId << finalize;
   Document projectionOption = Builder{} << "perUserCount" << 1 << "count" << 1 << finalize;
@@ -89,11 +89,9 @@ bool OrdersSimpleRequests::usePromo(Collection &promos, const oid &promoId, cons
   return (r.matched_count() == 1) && (r.modified_count() == 1);
 }
 
-bool OrdersSimpleRequests::successOrder(Collection &promos, const oid &orderId, const oid &promoId,
-                                        const oid &userId) const {
+bool OrdersSimpleRequests::successOrder(Collection &promos, const oid &orderId, const oid &userId) const {
   Document request =
-          Builder{} << "_id" << promoId
-                    << "orders" << open_document << "$elemMatch" << open_document
+          Builder{} << "orders" << open_document << "$elemMatch" << open_document
                                                                  << "_id" << orderId
                                                                  << "userId" << userId
                                                                  << close_document
@@ -110,11 +108,9 @@ bool OrdersSimpleRequests::successOrder(Collection &promos, const oid &orderId, 
   return (r.matched_count() == 1) && (r.modified_count() == 1);
 }
 
-bool OrdersSimpleRequests::cancelOrder(Collection &promos, const oid &orderId, const oid &promoId,
-                                       const oid &userId) const {
+bool OrdersSimpleRequests::cancelOrder(Collection &promos, const oid &orderId, const oid &userId) const {
   Document request =
-          Builder{} << "_id" << promoId
-                    << "orders" << open_document << "$elemMatch" << open_document
+          Builder{} << "orders" << open_document << "$elemMatch" << open_document
                                                                  << "_id" << orderId
                                                                  << "userId" << userId
                                                                  << close_document
@@ -127,16 +123,20 @@ bool OrdersSimpleRequests::cancelOrder(Collection &promos, const oid &orderId, c
           Builder{} << "$inc" << open_document << "lockedCount" << -1
                               << "count" << 1
                               << "users.$.count" << 1
-                              << close_document << finalize;
+                              << close_document
+                    << "$pull" << open_document
+                               << "orders" << open_document
+                                           << "_id" << orderId
+                                           << "userId" << userId
+                                           << close_document
+                               << close_document << finalize;
   auto r = promos.update_one(request.view(), update.view()).value();
   return (r.matched_count() == 1) && (r.modified_count() == 1);
 }
 
-bool OrdersSimpleRequests::removePromo(Collection &promos, const oid &promoId, const oid &orderId,
-                                       const oid &userId) const {
+bool OrdersSimpleRequests::removePromo(Collection &promos, const oid &orderId, const oid &userId) const {
   Document request =
-          Builder{} << "_id" << promoId
-                    << "count" << 0
+          Builder{} << "count" << 0
                     << "lockedCount" << 1
                     << "orders" << open_document << "$elemMatch" << open_document
                                                                  << "_id" << orderId
@@ -160,7 +160,7 @@ bool OrdersSimpleRequests::removeOrder(Collection &orders, const oid &orderId) c
   return (r.deleted_count() == 1);
 }
 
-void OrdersSimpleRequests::checkOrder(Collection &orders, const oid &orderId) const {
+bool OrdersSimpleRequests::hasOrderWithoutPromo(Collection &orders, const oid &orderId) const {
   Document request =
           Builder{}  << "_id" << orderId << finalize;
   Document projectionOption = Builder{} << "userId" << 1 << finalize;
@@ -168,15 +168,12 @@ void OrdersSimpleRequests::checkOrder(Collection &orders, const oid &orderId) co
   options.projection(projectionOption.view());
 
   auto r = orders.find_one(request.view(), options);
-  if (!r) {
-    throw OrderNotFound();
-  }
+  return bool(r);
 }
 
-oid OrdersSimpleRequests::getOrderUser(Collection &promos, const oid &promoId, const oid &orderId) const {
+OrderInfo OrdersSimpleRequests::getOrderInfo(Collection &promos, const oid &orderId) const {
   Document request =
-          Builder{} << "_id" << promoId
-                    << "orders" << open_document << "$elemMatch" << open_document
+          Builder{} << "orders" << open_document << "$elemMatch" << open_document
                                                                  << "_id" << orderId
                                                                  << close_document
                                 << close_document << finalize;
@@ -186,9 +183,13 @@ oid OrdersSimpleRequests::getOrderUser(Collection &promos, const oid &promoId, c
 
   auto r = promos.find_one(request.view(), options);
   if (r) {
-    auto orders = r->view()["orders"].get_array();
-    auto doc = orders.value[0].get_document();
-    return doc.view()["userId"].get_oid().value;
+    auto doc = r->view();
+    auto orders = doc["orders"].get_array();
+    auto order = orders.value[0].get_document().view();
+    auto promoId = doc["_id"].get_oid().value;
+    auto userId = order["userId"].get_oid().value;
+
+    return OrderInfo(userId, promoId);
   } else {
     throw OrderNotFound();
   }

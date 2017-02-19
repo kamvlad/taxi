@@ -16,9 +16,9 @@ public:
 
   std::string getId() const noexcept { return id_; }
 
-  std::string getUserId(std::string &userId) const noexcept { return id_; }
+  std::string getUserId() const noexcept { return userId_; }
 
-  std::string getPromoId(std::string &promoId) const noexcept { return promoId_; }
+  std::string getPromoId() const noexcept { return promoId_; }
 
   bool isPromoUsed() const noexcept { return promoUsed_; }
 

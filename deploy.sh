@@ -2,7 +2,11 @@
 
 function deployLocal {
     cp $1 /etc/fastcgi-daemon/
-    cp $2 /usr/local/lib/fastcgi2/dev/
+
+    for i in ${@:2}
+    do
+        cp $i /usr/local/lib/fastcgi2/dev/
+    done
     if [ -f /tmp/fastcgi_daemon.pid ]; then
         kill -9 `cat /tmp/fastcgi_daemon.pid`
     fi
@@ -11,10 +15,13 @@ function deployLocal {
 
 function deployRemote {
     scp $1 $3:/etc/fastcgi-daemon/
-    scp $2 $3:/usr/local/lib/fastcgi2/dev/
+    for i in ${@:2}
+    do
+        scp $2 $3:/usr/local/lib/fastcgi2/dev/
+    done
 
     ssh $3 "bash ./start-fastcgi.sh $(basename "$1")"
 }
 
-deployLocal $1 $2
-#deployRemote $1 $2 192.168.1.35
+deployLocal ${@}
+#deployRemote ${@} 192.168.1.35

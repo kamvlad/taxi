@@ -8,6 +8,10 @@
 #include <fastcgi2/component_factory.h>
 #include <fastcgi2/handler.h>
 #include <fastcgi2/request.h>
+#include <bsoncxx/json.hpp>
+#include <data/documentPresentation.h>
+#include <db/DatabaseComponent.h>
+#include <data/JSONPresentation.h>
 #include "common/httpStatuses.h"
 #include "common/requestHandler.h"
 #include "common/exceptions.h"
@@ -24,22 +28,32 @@ public:
 
 public:
   virtual void onLoad() {
-    const std::string loggerComponentName = context()->getConfig()->asString(
-            context()->getComponentXPath() + "/logger");
+    auto config = context()->getConfig();
+    auto xpath = context()->getComponentXPath();
+
+    const std::string loggerComponentName = config->asString(xpath + "/logger");
     logger_ = context()->findComponent<fastcgi::Logger>(loggerComponentName);
     if (!logger_) {
       throw std::runtime_error("cannot get component " + loggerComponentName);
     }
 
-    handlers_.reset(new CreateOrderHandler());
-    //TODO maybe change interface
-    handlers_->setNext(new GetOrderHandler())->setNext(new SetOrderStatusHandler());
-    logger_->debug("onLoad");
-    //TODO no hardcode in db connection!!!!
-  }
+    const std::string databaseComponentName = config->asString(xpath + "/database");
+    auto database = context()->findComponent<DatabaseComponent>(databaseComponentName);
 
-  virtual void onThreadStart() {
-    ;
+    if (!database) {
+      logger_->error("ERROR orders service cannot find database component");
+      throw std::runtime_error("cannot get component " + databaseComponentName);
+    }
+
+    auto ordersRepository = database->getOrdersRepository();
+
+    if (!ordersRepository) {
+      logger_->error("ERROR orders repository is null");
+      throw std::runtime_error("orders repository is null");
+    }
+
+    registerDocumentsPresentations();
+    createRequestsHandlers(ordersRepository);
   }
 
   virtual void onUnload() {
@@ -47,38 +61,41 @@ public:
   }
 
   virtual void handleRequest(fastcgi::Request *request, fastcgi::HandlerContext *context) {
-    RequestMethod method = parseRequestType(request->getRequestMethod());
     fastcgi::RequestStream output(request);
-    if (method != RequestMethod::GET && request->getContentType() != "application/json") {
+    auto method = parseRequestType(request->getRequestMethod());
+    auto presentation = getDocumentPresentation(request->getContentType());
+
+    if (method != RequestMethod::GET && presentation == nullptr) {
       request->setStatus(HttpStatus::UnsupportedMediaType);
-      output << "Only json content type is allowed\r\n";
+      output << "Content type not supported\r\n";
       return;
     }
 
-    using json = nlohmann::json;
     std::string requestBody;
     request->requestBody().toString(requestBody);
 
-    json jsonRequest;
+    Document requestContent;
     try {
       if (method != RequestMethod::GET) {
-        jsonRequest = json::parse(requestBody);
+        requestContent = std::move(presentation->fromString(requestBody));
       }
-    } catch (const std::invalid_argument &e) {
+    } catch (const std::exception &e) {
       request->setStatus(HttpStatus::BadRequest);
-      output << "JSON: " << e.what() << "\r\n";
+      output << e.what() << "\r\n";
       return;
     }
 
     try {
       std::string orderId = getOrderID(request->getScriptName());
+      Document result = handlers_->handleRequest(method, orderId, requestContent);
 
-      std::string result(handlers_->handleRequest(method, orderId, jsonRequest).dump());
-      output << result;
+      output << presentation->toString(result);
       request->setStatus(HttpStatus::OK);
     } catch (const BusinessLogicException &e) {
-      output << R"({"error":")" << e.what()
-             << R"(","errorCode":)" << e.getCode() << "}";
+      Document error;
+      error["error"] = e.what();
+      error["errorCode"] = std::to_string(e.getCode());
+      output << presentation->toString(error);
       request->setStatus(HttpStatus::OK);
     } catch (const std::invalid_argument &e) {
       request->setStatus(HttpStatus::BadRequest);
@@ -92,8 +109,18 @@ public:
       request->setStatus(HttpStatus::InternalServerError);
     }
   }
-
 private:
+  void registerDocumentsPresentations() {
+    presentations_["application/json"] = std::unique_ptr<DocumentPresentation>(new JSONPresentation());
+  }
+
+  void createRequestsHandlers(const std::shared_ptr<OrdersRepository>& ordersRepository) {
+    handlers_.reset(new CreateOrderHandler(ordersRepository));
+    handlers_->setNext(new GetOrderHandler(ordersRepository))
+            ->setNext(new SetOrderStatusHandler(ordersRepository));
+
+  }
+
   std::string getOrderID(const std::string &str) {
     if (str.size() > 8) {
       return str.substr(8);
@@ -102,11 +129,20 @@ private:
     }
   }
 
+  const DocumentPresentation* getDocumentPresentation(const std::string& contentType) const {
+    auto it = presentations_.find(contentType);
+    if (it != presentations_.end()) {
+      return it->second.get();
+    } else {
+      return nullptr;
+    };
+  };
 private:
   fastcgi::Logger *logger_;
-  std::unique_ptr<JSONRequestHandler> handlers_;
+  std::unique_ptr<RequestHandler> handlers_;
+  std::map<std::string, std::unique_ptr<const DocumentPresentation>> presentations_;
 };
 
 FCGIDAEMON_REGISTER_FACTORIES_BEGIN()
-  FCGIDAEMON_ADD_DEFAULT_FACTORY("OrdersService_factory", OrdersService)
+FCGIDAEMON_ADD_DEFAULT_FACTORY("OrdersService_factory", OrdersService)
 FCGIDAEMON_REGISTER_FACTORIES_END()

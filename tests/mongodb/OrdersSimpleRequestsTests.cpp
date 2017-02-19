@@ -15,11 +15,12 @@ instance inst{};
 class OrdersSimpleRequestsTests : public ::testing::Test {
 protected:
   OrdersSimpleRequestsTests() {
+    inst.current();
     dbClient = client(uri{});
     db = dbClient["taxiTestDB"];
   }
 
-  virtual void SetUp() {
+  virtual void SetUp() override {
     db.drop();
     users = db["users"];
     orders = db["orders"];
@@ -37,12 +38,12 @@ protected:
 
 TEST_F(OrdersSimpleRequestsTests, promoCounterPerUser) {
   oid promoId = requests.addPromo(promos, 20, 10);
-  PromoInfo promoInfo = requests.getPromoCountPerUser(promos, promoId);
+  PromoInfo promoInfo = requests.getPromoInfo(promos, promoId);
   ASSERT_EQ(10, promoInfo.perUserCount);
   ASSERT_EQ(20, promoInfo.count);
 
   try {
-    requests.getPromoCountPerUser(promos, oid());
+    requests.getPromoInfo(promos, oid());
     FAIL();
   } catch (const PromoNotFound &) {
     ;
@@ -85,8 +86,8 @@ TEST_F(OrdersSimpleRequestsTests, removePromo) {
 
   ASSERT_TRUE(requests.addUserToPromo(promos, promoId, userId, 1, orderId1));
   ASSERT_TRUE(requests.addUserToPromo(promos, promoId2, userId, 1, orderId2));
-  ASSERT_TRUE(requests.removePromo(promos, promoId, orderId1, userId));
-  ASSERT_FALSE(requests.removePromo(promos, promoId2, orderId2, userId));
+  ASSERT_TRUE(requests.removePromo(promos, orderId1, userId));
+  ASSERT_FALSE(requests.removePromo(promos, orderId2, userId));
 }
 
 TEST_F(OrdersSimpleRequestsTests, successOrder) {
@@ -95,7 +96,7 @@ TEST_F(OrdersSimpleRequestsTests, successOrder) {
 
   oid orderId;
   ASSERT_TRUE(requests.addUserToPromo(promos, promoId, userId, 1, orderId));
-  ASSERT_TRUE(requests.successOrder(promos, orderId, promoId, userId));
+  ASSERT_TRUE(requests.successOrder(promos, orderId, userId));
   Promo promo = requests.getPromo(promos, promoId);
 
   ASSERT_EQ(0, promo.getLockedCount());
@@ -109,9 +110,8 @@ TEST_F(OrdersSimpleRequestsTests, successOrderWithIncorrectData) {
 
   oid orderId;
   ASSERT_TRUE(requests.addUserToPromo(promos, promoId, userId, 1, orderId));
-  ASSERT_FALSE(requests.successOrder(promos, orderId, oid(), userId));
-  ASSERT_FALSE(requests.successOrder(promos, oid(), promoId, userId));
-  ASSERT_FALSE(requests.successOrder(promos, orderId, promoId, oid()));
+  ASSERT_FALSE(requests.successOrder(promos, oid(), userId));
+  ASSERT_FALSE(requests.successOrder(promos, orderId, oid()));
 
   Promo promo = requests.getPromo(promos, promoId);
   ASSERT_EQ(1, promo.getLockedCount());
@@ -124,12 +124,13 @@ TEST_F(OrdersSimpleRequestsTests, cancelOrder) {
 
   oid orderId;
   ASSERT_TRUE(requests.addUserToPromo(promos, promoId, userId, 1, orderId));
-  ASSERT_TRUE(requests.cancelOrder(promos, orderId, promoId, userId));
+  ASSERT_TRUE(requests.cancelOrder(promos, orderId, userId));
 
   Promo promo = requests.getPromo(promos, promoId);
   ASSERT_EQ(0, promo.getLockedCount());
   ASSERT_EQ(1, promo.getCount());
   ASSERT_EQ(1, promo.getUserPromoCount(userId));
+  ASSERT_FALSE(promo.hasOrder(orderId));
 }
 
 TEST_F(OrdersSimpleRequestsTests, cancelOrderWithIncorretData) {
@@ -138,9 +139,8 @@ TEST_F(OrdersSimpleRequestsTests, cancelOrderWithIncorretData) {
 
   oid orderId;
   ASSERT_TRUE(requests.addUserToPromo(promos, promoId, userId, 1, orderId));
-  ASSERT_FALSE(requests.cancelOrder(promos, oid(), promoId, userId));
-  ASSERT_FALSE(requests.cancelOrder(promos, orderId, oid(), userId));
-  ASSERT_FALSE(requests.cancelOrder(promos, orderId, promoId, oid()));
+  ASSERT_FALSE(requests.cancelOrder(promos, oid(), userId));
+  ASSERT_FALSE(requests.cancelOrder(promos, orderId, oid()));
 
   Promo promo = requests.getPromo(promos, promoId);
   ASSERT_EQ(1, promo.getLockedCount());
@@ -148,7 +148,7 @@ TEST_F(OrdersSimpleRequestsTests, cancelOrderWithIncorretData) {
   ASSERT_EQ(0, promo.getUserPromoCount(userId));
 }
 
-TEST_F(OrdersSimpleRequestsTests, getOrderUser) {
+TEST_F(OrdersSimpleRequestsTests, getOrderInfo) {
   oid promoId = requests.addPromo(promos, 3, 2);
   oid userId1 = requests.addUser(users);
   oid userId2 = requests.addUser(users);
@@ -161,9 +161,15 @@ TEST_F(OrdersSimpleRequestsTests, getOrderUser) {
   ASSERT_TRUE(requests.usePromo(promos, promoId, userId1, orderId2));
   ASSERT_TRUE(requests.addUserToPromo(promos, promoId, userId2, 2, orderId3));
 
-  ASSERT_EQ(userId1, requests.getOrderUser(promos, promoId, orderId1));
-  ASSERT_EQ(userId1, requests.getOrderUser(promos, promoId, orderId2));
-  ASSERT_EQ(userId2, requests.getOrderUser(promos, promoId, orderId3));
+  OrderInfo expectedOrder1(userId1, promoId);
+  OrderInfo expectedOrder2(userId1, promoId);
+  OrderInfo expectedOrder3(userId2, promoId);
+
+  auto actual = requests.getOrderInfo(promos, orderId1);
+
+  ASSERT_EQ(expectedOrder1, actual);
+  ASSERT_EQ(expectedOrder2, requests.getOrderInfo(promos, orderId2));
+  ASSERT_EQ(expectedOrder3, requests.getOrderInfo(promos, orderId3));
 }
 
 TEST_F(OrdersSimpleRequestsTests, getUserWithWrongData) {
@@ -174,14 +180,7 @@ TEST_F(OrdersSimpleRequestsTests, getUserWithWrongData) {
   ASSERT_TRUE(requests.addUserToPromo(promos, promoId, userId, 2, orderId));
 
   try {
-    ASSERT_EQ(userId, requests.getOrderUser(promos, oid(), orderId));
-    FAIL();
-  } catch (const OrderNotFound&) {
-    ;
-  }
-
-  try {
-    ASSERT_EQ(userId, requests.getOrderUser(promos, promoId, oid()));
+    requests.getOrderInfo(promos, oid());
     FAIL();
   } catch (const OrderNotFound&) {
 
@@ -191,12 +190,7 @@ TEST_F(OrdersSimpleRequestsTests, getUserWithWrongData) {
 TEST_F(OrdersSimpleRequestsTests, addAndRemoveOrder) {
   oid orderId = requests.addOrder(orders);
 
+  ASSERT_TRUE(requests.hasOrderWithoutPromo(orders, orderId));
   ASSERT_TRUE(requests.removeOrder(orders, orderId));
-
-  try {
-    requests.checkOrder(orders, orderId);
-    FAIL();
-  } catch (const OrderNotFound&) {
-
-  }
+  ASSERT_FALSE(requests.hasOrderWithoutPromo(orders, orderId));
 }

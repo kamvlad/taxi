@@ -8,24 +8,25 @@
 
 class OrdersRepositoryMongoDB : public OrdersRepository {
 public:
-  OrdersRepositoryMongoDB(const std::string &dbName);
+  OrdersRepositoryMongoDB(const std::shared_ptr<mongocxx::pool>& clientsPool, const std::string& database);
 
-  OrdersRepositoryMongoDB(const std::string &dbURI, const std::string &dbName);
+  virtual Order createOrder() override;
 
-  virtual Order createOrder();
+  virtual Order createOrder(const std::string &userId, const std::string &promoId) override;
 
-  virtual Order createOrder(const std::string &userId, const std::string &promoId);
+  virtual Order getOrder(const std::string &orderId) override;
 
-  virtual Order getOrder(const std::string &orderId);
+  virtual void cancelOrder(const std::string &orderId) override;
 
-  virtual void cancelOrder(const std::string &orderId);
-
-  virtual void successOrder(const std::string &orderId);
+  virtual void successOrder(const std::string &orderId) override;
 
   virtual ~OrdersRepositoryMongoDB() { ; }
-
 private:
-  mongocxx::pool clientsPool_;
-  std::string dbName_;
+  bsoncxx::oid getUserOId(const std::string &userId) const;
+  bsoncxx::oid getOrderOId(const std::string &orderId) const;
+  bsoncxx::oid getPromoOId(const std::string &promoId) const;
+private:
+  std::shared_ptr<mongocxx::pool> clientsPool_;
+  const std::string dbName_;
   const OrdersSimpleRequests request_;
 };

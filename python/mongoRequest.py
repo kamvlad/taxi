@@ -1,4 +1,7 @@
+import random
+
 import pymongo
+import time
 from bson.objectid import ObjectId
 
 def addUser(db):
@@ -84,6 +87,43 @@ def getOrderStatus(db, promoId, orderId):
               'orders': {'$elemMatch': {'_id': orderId}}}
     return db.promos.find_one(search, {'orders.$.userId': 1})
 
+def searchOnlyByOrder(db, orderId):
+    search = {'orders': {'$elemMatch': {'_id': orderId}}}
+    return db.promos.find_one(search, {'orders.$.userId': 1})
+
+def createLargeDataset(db):
+    size = 5000
+    users = []
+    for i in range(100):
+        users += [addUser(db)]
+
+    orders = []
+    for i in range(size):
+        promoId = addPromoCode(db, 10, 10)
+        for x in range(10):
+            order = createOrderWithPromo(db, users[random.randint(0, len(users) - 1)], promoId)
+            orders += [(promoId, order)]
+
+    reqOrders = []
+    for i in range(size):
+        reqOrders += [orders[random.randint(0, len(orders) - 1)]]
+
+    start = time.time()
+    for req in reqOrders:
+        if getOrderStatus(db, req[0], req[1]) is None:
+            print("ERROR!")
+            return
+    delta = time.time() - start
+    print("Time 1:", delta)
+
+    start = time.time()
+    for req in reqOrders:
+        if searchOnlyByOrder(db, req[1]) is None:
+            print("ERROR!")
+            return
+    delta = time.time() - start
+    print("Time 2:", delta)
+
 def main():
     client = pymongo.MongoClient()
     db = client.taxiTestDB
@@ -91,16 +131,21 @@ def main():
     db.promos.remove()
     db.users.remove()
 
-    userId1 = addUser(db)
-    userId2 = addUser(db)
-    promoId = addPromoCode(db, 3, 3)
+    print(db.promos.create_index([('orders._id', pymongo.ASCENDING)], unique=True))
+    createLargeDataset(db)
+
+#    userId1 = addUser(db)
+#    userId2 = addUser(db)
+#    promoId = addPromoCode(db, 3, 3)
+
+
 
     #print removeOrder(db, promoId, )
-    orderId = createOrderWithPromo(db, userId1, promoId)
-    orderId = createOrderWithPromo(db, userId2, promoId)
-    orderId = createOrderWithPromo(db, userId1, promoId)
+    #orderId = createOrderWithPromo(db, userId1, promoId)
+    #orderId = createOrderWithPromo(db, userId2, promoId)
+    #orderId = createOrderWithPromo(db, userId1, promoId)
 
-    print(getOrderStatus(db, promoId, orderId))
+    #print(getOrderStatus(db, promoId, orderId))
 
     #print(successOrder(db, promoId, orderId, userId1).matched_count)
     #print(removeOrder(db, promoId, orderId, userId1))

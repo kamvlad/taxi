@@ -1,13 +1,26 @@
 #include <gtest/gtest.h>
-#include "json/json.hpp"
+#include "data/JSONPresentation.h"
 
-using json = nlohmann::json;
+TEST(JSONPresentation, Basic) {
+  Document expected;
 
-TEST(JSONTests, malformedJSON) {
+  expected["a"] = "b";
+  expected["c"] = "d";
+
+  JSONPresentation converter;
+
+  auto stringPresentation = converter.toString(expected);
+  auto actual = converter.fromString(stringPresentation);
+
+  ASSERT_EQ(expected, actual);
+}
+
+TEST(JSONPresentation, MalformedJSON) {
+  JSONPresentation converter;
+
   try {
-    json::parse("hellofoo");
-    FAIL();
-  } catch (const std::invalid_argument &e) {
-    // OK
+    converter.fromString("foobar}{");
+  } catch (const std::exception& ) {
+
   }
 }

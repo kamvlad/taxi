@@ -4,20 +4,49 @@
         <pool name="main" threads="8" queue="10000"/>
     </pools>
     <handlers>
-        <handler pool="main" url="/orders(/([0-9a-f]{24})([0-9a-f]{14})?)?">
+        <handler pool="main" url="/orders(/[0-9a-f]{24})?">
             <component name="orders"/>
         </handler>
     </handlers>
     <components>
         <component name="orders" type="ordersService:OrdersService_factory">
             <logger>daemon-logger</logger>
+            <database>database</database>
+        </component>
+        <component name="database" type="mongodbComponent:MongoDBComponent_factory">
+            <logger>daemon-logger</logger>
+
+            <!--
+            <user>a</user>
+            <password>b</password>
+            -->
+            <hosts>
+                <host>localhost</host>
+            </hosts>
+            <database>taxiDB</database>
+            <options>
+            <!--
+                <replicaSet></replicaSet>
+                <ssl></ssl>
+                <connectTimeoutMS></connectTimeoutMS>
+                <socketTimeoutMS></socketTimeoutMS>
+
+                <maxPoolSize></maxPoolSize>
+                <minPoolSize></minPoolSize>
+                <maxIdleTimeMS></maxIdleTimeMS>
+                <waitQueueMultiple></waitQueueMultiple>
+                <waitQueueTimeoutMS></waitQueueTimeoutMS>
+            -->
+            </options>
         </component>
         <component name="daemon-logger" type="logger:logger">
             <ident>taxi</ident>
+            <level>DEBUG</level>
         </component>
     </components>
     <modules>
         <module name="ordersService" path="/usr/local/lib/fastcgi2/dev/libordersService.so"/>
+        <module name="mongodbComponent" path="/usr/local/lib/fastcgi2/dev/libmongodbComponent.so"/>
         <module name="logger" path="/usr/local/lib/fastcgi2/fastcgi2-syslog.so"/>
     </modules>
     <daemon>

@@ -1,35 +1,41 @@
 #pragma once
 
 #include <memory>
-#include <json/json.hpp>
+#include <bsoncxx/json.hpp>
 
 enum class RequestMethod {
   POST, GET
 };
 
-class JSONRequestHandler {
+class RequestHandler {
 public:
-  nlohmann::json handleRequest(RequestMethod method, const std::string &param,
-                               const nlohmann::json &content) {
-    nlohmann::json result;
+  RequestHandler() { ; }
+
+  RequestHandler(const RequestHandler&) = delete;
+
+  RequestHandler& operator= (const RequestHandler&) = delete;
+
+  Document handleRequest(RequestMethod method, const std::string &param,
+                               const Document &content) {
+    Document result;
     handleRequest(method, param, content, result);
     return result;
   }
 
-  JSONRequestHandler *setNext(JSONRequestHandler *next) {
+  RequestHandler *setNext(RequestHandler *next) {
     next_.reset(next);
     return next;
   };
 
-  virtual ~JSONRequestHandler() { ; }
+  virtual ~RequestHandler() { ; }
 
 protected:
-  virtual bool process(RequestMethod method, const std::string &param, const nlohmann::json &content,
-                       nlohmann::json &result) = 0;
+  virtual bool process(RequestMethod method, const std::string &param, const Document &content,
+                       Document &result) = 0;
 
 private:
   void handleRequest(RequestMethod method, const std::string &param,
-                     const nlohmann::json &content, nlohmann::json &result) {
+                     const Document &content, Document &result) {
     if (!process(method, param, content, result)) {
       if (next_) {
         next_->handleRequest(method, param, content, result);
@@ -40,7 +46,7 @@ private:
   }
 
 private:
-  std::unique_ptr<JSONRequestHandler> next_;
+  std::unique_ptr<RequestHandler> next_;
 };
 
 inline RequestMethod parseRequestType(const std::string &method) {

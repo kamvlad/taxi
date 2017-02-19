@@ -1,36 +1,26 @@
 #pragma once
 
-#include "common/exceptions.h"
+#include "ordersExceptions.h"
 #include "common/requestHandler.h"
+#include "db/ordersRepository.h"
 
-//TODO Remove it
-class EchoHandler : public JSONRequestHandler {
-
-public:
-  virtual bool process(RequestMethod method, const std::string &param, const nlohmann::json &content,
-                       nlohmann::json &result) {
-    result = content;
-    return true;
-  }
-};
-
-bool getStringField(const nlohmann::json &content, const std::string &name, std::string &rslt) {
+bool getStringField(const Document &content, const std::string &name, std::string &rslt) {
   auto it = content.find(name);
 
-  if (it != content.end() && it->is_string()) {
-    rslt = *it;
+  if (it != content.end()) {
+    rslt = it->second;
     return true;
   } else {
     return false;
   }
 }
 
-class CreateOrderHandler : public JSONRequestHandler {
-
+class CreateOrderHandler : public RequestHandler {
 public:
-  //TODO Make it non copybale
-  virtual bool process(RequestMethod method, const std::string &param, const nlohmann::json &content,
-                       nlohmann::json &result) {
+  CreateOrderHandler(const std::shared_ptr<OrdersRepository>& orders) : orders_(orders) { ; }
+
+  virtual bool process(RequestMethod method, const std::string &param, const Document &content,
+                       Document &result) {
     if (method == RequestMethod::POST && param == "") {
       std::string userId;
       std::string promoId;
@@ -38,64 +28,73 @@ public:
       bool hasPromoIdField = getStringField(content, "promoId", promoId);
 
       if (hasUserIdField && hasPromoIdField) {
-
+        auto order = orders_->createOrder(userId, promoId);
+        result["orderId"] = order.getId();
       } else if (!(hasPromoIdField && hasPromoIdField)) {
-
+        auto order = orders_->createOrder();
+        orders_->createOrder();
+        result["orderId"] = order.getId();
       } else {
         if (!hasUserIdField) {
-          //TODO enum codes
-          throw BusinessLogicException("userId not found", 100);
+          throw UserIdNotFound();
         } else {
-          //TODO enum codes
-          throw BusinessLogicException("promoId not found", 100);
+          throw PromoIdNotFound();
         }
       }
       return true;
     }
     return false;
   }
+private:
+  std::shared_ptr<OrdersRepository> orders_;
 };
 
-class GetOrderHandler : public JSONRequestHandler {
+class GetOrderHandler : public RequestHandler {
 public:
-  //TODO Make it non copybale
-  virtual bool process(RequestMethod method, const std::string &param, const nlohmann::json &content,
-                       nlohmann::json &result) {
-    //TODO Parse param?
-    std::cout << "HERE" << std::endl;
+  GetOrderHandler(const std::shared_ptr<OrdersRepository>& orders) : orders_(orders) { ; }
+
+  virtual bool process(RequestMethod method, const std::string &param, const Document &content,
+                       Document &result) {
     if (method == RequestMethod::GET && param != "") {
-      result["userId"] = param;
-      result["promoId"] = "DEAD";
+      auto order = orders_->getOrder(param);
+      result["userId"] = order.getUserId();
+      result["promoId"] = order.getPromoId();
       return true;
     }
     return false;
   }
+private:
+  std::shared_ptr<OrdersRepository> orders_;
 };
 
 
-class SetOrderStatusHandler : public JSONRequestHandler {
+class SetOrderStatusHandler : public RequestHandler {
 public:
-  //TODO Make it non copybale
-  virtual bool process(RequestMethod method, const std::string &param, const nlohmann::json &content,
-                       nlohmann::json &result) {
-    //TODO Parse param?
+  SetOrderStatusHandler(const std::shared_ptr<OrdersRepository>& orders) : orders_(orders) { ; }
+
+  virtual bool process(RequestMethod method, const std::string &param, const Document &content,
+                       Document &result) {
     if (method == RequestMethod::POST && param != "") {
       std::string newStatus;
 
       if (!getStringField(content, "newStatus", newStatus)) {
-        throw BusinessLogicException("newStatus not found", 100);
+        throw NewStatusNotFound();
       }
 
       if (newStatus == "cancel") {
-
+        orders_->cancelOrder(param);
       } else if (newStatus == "success") {
-
+        orders_->successOrder(param);
       } else {
-        throw BusinessLogicException("unknown status", 100);
+        throw IncorrectStatus();
       }
+
+      result["status"] = "OK";
       return true;
     }
     return false;
   }
+private:
+  std::shared_ptr<OrdersRepository> orders_;
 };
 
