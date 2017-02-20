@@ -1,6 +1,6 @@
-#include "JSONPresentation.h"
+#include "jsonPresentation.h"
 
-std::string JSONPresentation::toString(const Document &document) const {
+std::string jsonPresentation::toString(const Document &document) const {
   if (document.empty()) {
     return "{}";
   }
@@ -17,7 +17,7 @@ std::string JSONPresentation::toString(const Document &document) const {
   return r;
 }
 
-Document JSONPresentation::fromString(const std::string &str) const {
+Document jsonPresentation::fromString(const std::string &str) const {
   auto doc = bsoncxx::from_json(str);
   auto docView = doc.view();
   Document rslt;

@@ -25,8 +25,8 @@ protected:
 
     promo1 = requests.addPromo(promos, 3, 2).to_string();
     promo2 = requests.addPromo(promos, 3, 2).to_string();
-    user1 = oid().to_string();
-    user2 = oid().to_string();
+    user1 = requests.addUser(users).to_string();
+    user2 = requests.addUser(users).to_string();
 
     orders.reset(new OrdersRepositoryMongoDB(std::make_shared<mongocxx::pool>(), dbName));
   }
@@ -50,8 +50,10 @@ protected:
 };
 
 TEST_F(OrdersRepositoryTests, createOrderWithPromo) {
-  orders->createOrder(user1, promo1);
-  orders->createOrder(user1, promo1);
+  auto order = orders->createOrder(user1, promo1);
+  orders->successOrder(order.getId());
+  order = orders->createOrder(user1, promo1);
+  orders->successOrder(order.getId());
 
   try {
     orders->createOrder(user1, promo1);
@@ -60,7 +62,8 @@ TEST_F(OrdersRepositoryTests, createOrderWithPromo) {
     ;
   }
 
-  orders->createOrder(user2, promo1);
+  order = orders->createOrder(user2, promo1);
+  orders->successOrder(order.getId());
 
   try {
     orders->createOrder(user2, promo1);
@@ -98,9 +101,12 @@ TEST_F(OrdersRepositoryTests, getOrderWithIncorrectData) {
 }
 
 TEST_F(OrdersRepositoryTests, expiredPromo) {
-  orders->createOrder(user1, promo1);
-  orders->createOrder(user1, promo1);
-  orders->createOrder(user2, promo1);
+  auto order = orders->createOrder(user1, promo1);
+  orders->successOrder(order.getId());
+  order = orders->createOrder(user1, promo1);
+  orders->successOrder(order.getId());
+  order = orders->createOrder(user2, promo1);
+  orders->successOrder(order.getId());
 
   try {
     orders->createOrder(user2, promo1);
@@ -111,8 +117,10 @@ TEST_F(OrdersRepositoryTests, expiredPromo) {
 }
 
 TEST_F(OrdersRepositoryTests, expiredPromoForUser) {
-  orders->createOrder(user1, promo1);
-  orders->createOrder(user1, promo1);
+  auto order = orders->createOrder(user1, promo1);
+  orders->successOrder(order.getId());
+  order = orders->createOrder(user1, promo1);
+  orders->successOrder(order.getId());
 
   try {
     orders->createOrder(user1, promo1);
@@ -133,8 +141,9 @@ TEST_F(OrdersRepositoryTests, incorrectPromo) {
 
 TEST_F(OrdersRepositoryTests, cancelOrderWithPromo1) {
   Order order1 = orders->createOrder(user1, promo1);
+  orders->successOrder(order1.getId());
   Order order2 = orders->createOrder(user1, promo1);
-  orders->cancelOrder(order1.getId());
+  orders->cancelOrder(order2.getId());
   Order order3 = orders->createOrder(user1, promo1);
 
   try {
@@ -147,10 +156,11 @@ TEST_F(OrdersRepositoryTests, cancelOrderWithPromo1) {
 
 TEST_F(OrdersRepositoryTests, cancelOrderWithPromo2) {
   Order order1 = orders->createOrder(user1, promo1);
+  orders->successOrder(order1.getId());
   Order order2 = orders->createOrder(user1, promo1);
   Order order3 = orders->createOrder(user2, promo1);
-
   orders->cancelOrder(order2.getId());
+  orders->successOrder(order3.getId());
   Order order4 = orders->createOrder(user2, promo1);
 
   try {
@@ -175,8 +185,8 @@ TEST_F(OrdersRepositoryTests, cancelOrderWithoutPromo) {
 
 TEST_F(OrdersRepositoryTests, successOrderWithPromo1) {
   Order order1 = orders->createOrder(user1, promo1);
-  Order order2 = orders->createOrder(user1, promo1);
   orders->successOrder(order1.getId());
+  Order order2 = orders->createOrder(user1, promo1);
   orders->successOrder(order2.getId());
 
   try {
@@ -202,8 +212,8 @@ TEST_F(OrdersRepositoryTests, successOrderWithPromo1) {
 
 TEST_F(OrdersRepositoryTests, successOrderWithPromo2) {
   Order order1 = orders->createOrder(user1, promo1);
-  Order order2 = orders->createOrder(user1, promo1);
   orders->successOrder(order1.getId());
+  Order order2 = orders->createOrder(user1, promo1);
   orders->successOrder(order2.getId());
   Order order3 = orders->createOrder(user2, promo1);
   orders->successOrder(order3.getId());
@@ -224,6 +234,26 @@ TEST_F(OrdersRepositoryTests, successOrderWithoutPromo) {
     orders->getOrder(order1.getId());
     FAIL();
   } catch (const OrderNotFound&) {
+
+  }
+}
+
+TEST_F(OrdersRepositoryTests, alreadyExistsOrder) {
+  orders->createOrder(user1, promo1);
+
+  try {
+    orders->createOrder(user1, promo1);
+    FAIL();
+  } catch (const OrderExists&) {
+
+  }
+}
+
+TEST_F(OrdersRepositoryTests, userNotFound) {
+  try {
+    orders->createOrder(oid().to_string(), promo1);
+    FAIL();
+  } catch (const UserNotFound&) {
 
   }
 }

@@ -41,7 +41,7 @@ public:
     } else {
       uri << sUri;
     }
-    return mongocxx::uri(uri.str());
+    return mongocxx::uri{uri.str()};
   }
 
   std::string getDatabaseName() const {

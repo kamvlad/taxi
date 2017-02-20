@@ -57,8 +57,12 @@ public:
                        Document &result) {
     if (method == RequestMethod::GET && param != "") {
       auto order = orders_->getOrder(param);
-      result["userId"] = order.getUserId();
-      result["promoId"] = order.getPromoId();
+      if (order.isPromoUsed()) {
+        result["userId"] = order.getUserId();
+        result["promoId"] = order.getPromoId();
+      } else {
+        result["status"] = "in progress";
+      }
       return true;
     }
     return false;

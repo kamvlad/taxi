@@ -27,6 +27,14 @@ def createOrder(userId, promoId):
     result = conn.getresponse().read().decode('utf-8')
     return (ObjectId(json.loads(result)['orderId']), userId, promoId)
 
+def createOrder():
+    conn = HTTPConnection('localhost')
+    #body = '{ "promoId": "%s", "userId": "%s"}' % (promoId, userId)
+    body = '{}'
+    conn.request('POST', 'http://localhost/orders', body, headers={'Content-Type': 'application/json'})
+    result = conn.getresponse().read().decode('utf-8')
+    return (ObjectId(json.loads(result)['orderId']), userId, promoId)
+
 
 def getOrder(orderId):
     conn = HTTPConnection('localhost')
@@ -61,7 +69,7 @@ def main():
     users = createUsers(db)
 
     orders = []
-    orders += [createOrder(users[0], promos[0])]
+    orders += [createOrder()]
 
     order = getOrder(orders[0][0])
     if order[0] != users[0] or order[1] != promos[0]:

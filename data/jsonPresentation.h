@@ -5,11 +5,11 @@
 #include "document.h"
 #include "documentPresentation.h"
 
-class JSONPresentation : public DocumentPresentation {
+class jsonPresentation : public DocumentPresentation {
 public:
   virtual std::string toString(const Document& document) const override;
 
   virtual Document fromString(const std::string& str) const override;
 
-  virtual ~JSONPresentation() { ; }
+  virtual ~jsonPresentation() { ; }
 };

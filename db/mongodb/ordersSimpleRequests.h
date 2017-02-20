@@ -4,11 +4,13 @@
 #include <mongocxx/collection.hpp>
 #include "promo.h"
 
-struct PromoInfo {
+struct PromoResponse {
   const int32_t count;
   const int32_t perUserCount;
+	const bool hasUser;
 
-  PromoInfo(int32_t count_, int32_t perUserCount_) : count(count_), perUserCount(perUserCount_) { ; }
+  PromoResponse(int32_t count_, int32_t perUserCount_, bool hasUser_) : count(count_), perUserCount(perUserCount_),
+																																		hasUser(hasUser_) { ; }
 };
 
 struct OrderInfo {
@@ -29,7 +31,9 @@ public:
 
   oid addUser(Collection &users) const;
 
-  PromoInfo getPromoInfo(Collection &promos, const oid &promoId) const;
+	bool hasUser(Collection &users, const oid &userId) const;
+
+  PromoResponse getPromoInfo(Collection &promos, const oid &promoId, const oid& userId) const;
 
   bool addUserToPromo(Collection &promos, const oid &promoId, const oid &userId, int32_t perUserCount,
                       const oid& orderId) const;

@@ -38,16 +38,23 @@ protected:
 
 TEST_F(OrdersSimpleRequestsTests, promoCounterPerUser) {
   oid promoId = requests.addPromo(promos, 20, 10);
-  PromoInfo promoInfo = requests.getPromoInfo(promos, promoId);
+  PromoResponse promoInfo = requests.getPromoInfo(promos, promoId, oid());
   ASSERT_EQ(10, promoInfo.perUserCount);
   ASSERT_EQ(20, promoInfo.count);
 
   try {
-    requests.getPromoInfo(promos, oid());
+    requests.getPromoInfo(promos, oid(), oid());
     FAIL();
   } catch (const PromoNotFound &) {
     ;
   }
+}
+
+TEST_F(OrdersSimpleRequestsTests, hasUser) {
+  oid userId = requests.addUser(users);
+
+  ASSERT_TRUE(requests.hasUser(users, userId));
+  ASSERT_FALSE(requests.hasUser(users, oid()));
 }
 
 TEST_F(OrdersSimpleRequestsTests, addUserToPromo) {

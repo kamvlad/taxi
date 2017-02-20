@@ -9,9 +9,10 @@
 #include <fastcgi2/handler.h>
 #include <fastcgi2/request.h>
 #include <bsoncxx/json.hpp>
-#include <data/documentPresentation.h>
-#include <db/DatabaseComponent.h>
-#include <data/JSONPresentation.h>
+#include "i18n/Messages.h"
+#include "data/documentPresentation.h"
+#include "db/DatabaseComponent.h"
+#include "data/jsonPresentation.h"
 #include "common/httpStatuses.h"
 #include "common/requestHandler.h"
 #include "common/exceptions.h"
@@ -61,13 +62,14 @@ public:
   }
 
   virtual void handleRequest(fastcgi::Request *request, fastcgi::HandlerContext *context) {
+    const std::string lang("en_EN");
     fastcgi::RequestStream output(request);
     auto method = parseRequestType(request->getRequestMethod());
     auto presentation = getDocumentPresentation(request->getContentType());
 
     if (method != RequestMethod::GET && presentation == nullptr) {
       request->setStatus(HttpStatus::UnsupportedMediaType);
-      output << "Content type not supported\r\n";
+      output << getMessage(lang, "_CONTENT_TYPE_NOT_SUPPORTED") << "\r\n";
       return;
     }
 
@@ -93,7 +95,7 @@ public:
       request->setStatus(HttpStatus::OK);
     } catch (const BusinessLogicException &e) {
       Document error;
-      error["error"] = e.what();
+      error["error"] = getMessage(lang, e.what());
       error["errorCode"] = std::to_string(e.getCode());
       output << presentation->toString(error);
       request->setStatus(HttpStatus::OK);
@@ -111,7 +113,7 @@ public:
   }
 private:
   void registerDocumentsPresentations() {
-    presentations_["application/json"] = std::unique_ptr<DocumentPresentation>(new JSONPresentation());
+    presentations_["application/json"] = std::unique_ptr<DocumentPresentation>(new jsonPresentation());
   }
 
   void createRequestsHandlers(const std::shared_ptr<OrdersRepository>& ordersRepository) {

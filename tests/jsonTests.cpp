@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "data/JSONPresentation.h"
+#include "data/jsonPresentation.h"
 
 TEST(JSONPresentation, Basic) {
   Document expected;
@@ -7,7 +7,7 @@ TEST(JSONPresentation, Basic) {
   expected["a"] = "b";
   expected["c"] = "d";
 
-  JSONPresentation converter;
+  jsonPresentation converter;
 
   auto stringPresentation = converter.toString(expected);
   auto actual = converter.fromString(stringPresentation);
@@ -16,7 +16,7 @@ TEST(JSONPresentation, Basic) {
 }
 
 TEST(JSONPresentation, MalformedJSON) {
-  JSONPresentation converter;
+  jsonPresentation converter;
 
   try {
     converter.fromString("foobar}{");

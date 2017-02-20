@@ -16,7 +16,7 @@ public:
 
 class PromoIdNotFound : public IncorrectRequest {
 public:
-  PromoIdNotFound() : IncorrectRequest("_USERID_NOT_FOUND", 72) { ; }
+  PromoIdNotFound() : IncorrectRequest("_PROMOID_NOT_FOUND", 72) { ; }
 };
 
 class NewStatusNotFound : public IncorrectRequest {
@@ -26,5 +26,5 @@ public:
 
 class IncorrectStatus : public IncorrectRequest {
 public:
-  IncorrectStatus() : IncorrectRequest("_USERID_NOT_FOUND", 74) { ; }
+  IncorrectStatus() : IncorrectRequest("_INCORRECT_STATUS", 74) { ; }
 };

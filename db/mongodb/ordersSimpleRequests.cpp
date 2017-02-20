@@ -26,17 +26,30 @@ oid OrdersSimpleRequests::addUser(Collection &users) const {
   return r.inserted_id().get_oid().value;
 }
 
-PromoInfo OrdersSimpleRequests::getPromoInfo(Collection &promos, const oid &promoId) const {
+bool OrdersSimpleRequests::hasUser(Collection &users, const oid &userId) const {
+  Document request =
+          Builder{} << "_id" << userId << finalize;
+
+  auto r = users.find_one(request.view());
+  return bool(r);
+}
+
+PromoResponse OrdersSimpleRequests::getPromoInfo(Collection &promos, const oid &promoId, const oid& userId) const {
   Document request =
           Builder{} << "_id" << promoId << finalize;
-  Document projectionOption = Builder{} << "perUserCount" << 1 << "count" << 1 << finalize;
+  Document projectionOption = Builder{} << "perUserCount" << 1 << "count" << 1
+                                        << "orders" << open_document << "$elemMatch" << open_document
+                                                                                     << "userId" << userId
+                                                                                     << close_document
+                                                    << close_document << finalize;
   auto options = Options::find();
   options.projection(projectionOption.view());
 
   auto r = promos.find_one(request.view(), options);
   if (r) {
     auto rv =  r->view();
-    return PromoInfo(rv["count"].get_int32(), rv["perUserCount"].get_int32());
+    bool hasUser = (rv.find("orders") != rv.end());
+    return PromoResponse(rv["count"].get_int32(), rv["perUserCount"].get_int32(), hasUser);
   } else {
     throw PromoNotFound();
   }

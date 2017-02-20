@@ -2,6 +2,11 @@
 
 #include "common/exceptions.h"
 
+class UserNotFound : public BusinessLogicException {
+public:
+  UserNotFound() : BusinessLogicException("_USER_NOT_FOUND", 10) { ; }
+};
+
 class OrderNotFound : public BusinessLogicException {
 public:
   OrderNotFound() : BusinessLogicException("_ORDER_NOT_FOUND", 11) { ; }
@@ -30,4 +35,9 @@ public:
 class IncorrectPromoId : public BusinessLogicException {
 public:
   IncorrectPromoId() : BusinessLogicException("_INCORRECT_PROMO_ID", 16) { ; }
+};
+
+class OrderExists : public BusinessLogicException {
+public:
+  OrderExists() : BusinessLogicException("_ORDER_EXISTS_", 17) { ; }
 };

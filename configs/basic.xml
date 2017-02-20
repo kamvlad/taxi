@@ -11,9 +11,9 @@
     <components>
         <component name="orders" type="ordersService:OrdersService_factory">
             <logger>daemon-logger</logger>
-            <database>database</database>
+            <database>mongodbComponent</database>
         </component>
-        <component name="database" type="mongodbComponent:MongoDBComponent_factory">
+        <component name="mongodbComponent" type="mongodbComponent:MongoDBComponent_factory">
             <logger>daemon-logger</logger>
 
             <!--

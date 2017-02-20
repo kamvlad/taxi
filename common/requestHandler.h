@@ -32,7 +32,6 @@ public:
 protected:
   virtual bool process(RequestMethod method, const std::string &param, const Document &content,
                        Document &result) = 0;
-
 private:
   void handleRequest(RequestMethod method, const std::string &param,
                      const Document &content, Document &result) {

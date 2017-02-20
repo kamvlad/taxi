@@ -5,6 +5,7 @@
 
 using oid = bsoncxx::oid;
 
+const std::string UsersCollectionName("users");
 const std::string OrdersCollectionName("orders");
 const std::string PromosCollectionName("promos");
 
@@ -29,17 +30,26 @@ Order OrdersRepositoryMongoDB::createOrder(const std::string &userId, const std:
   auto client = clientsPool_->acquire();
   auto db = (*client)[dbName_];
   auto promos = db[PromosCollectionName];
+  auto users = db[UsersCollectionName];
   oid orderOId;
   oid promoOId = getPromoOId(promoId);
   oid userOId = getUserOId(userId);
 
-  PromoInfo promoInfo = request_.getPromoInfo(promos, promoOId);
+  if (!request_.hasUser(users, userOId)) {
+    throw UserNotFound();
+  }
 
-  if (promoInfo.count == 0) {
+  PromoResponse promoResponse = request_.getPromoInfo(promos, promoOId, userOId);
+
+  if (promoResponse.count == 0) {
     throw PromoExpired();
   }
 
-  if (!request_.addUserToPromo(promos, promoOId, userOId, promoInfo.perUserCount, orderOId)) {
+  if (promoResponse.hasUser) {
+    throw OrderExists();
+  }
+
+  if (!request_.addUserToPromo(promos, promoOId, userOId, promoResponse.perUserCount, orderOId)) {
     if (!request_.usePromo(promos, promoOId, userOId, orderOId)) {
       throw PromoExpired();
     }

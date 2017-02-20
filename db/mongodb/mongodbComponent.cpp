@@ -8,7 +8,6 @@
 #include "ordersRepositoryMongoDB.h"
 #include "mongodbComponentConfig.h"
 
-
 class MongoDBComponent : virtual public fastcgi::Component, public DatabaseComponent {
 public:
   MongoDBComponent(fastcgi::ComponentContext *context) :
