@@ -40,8 +40,8 @@ const std::string Messages::get(const std::string& locale, const std::string& id
   auto& dict = itDict->second;
   auto word = dict->find(id);
 
-  if (word == itDict->second->end()) {
-    return word->second;
+  if (word == dict->end()) {
+    return id;
   } else {
     return word->second;
   }
