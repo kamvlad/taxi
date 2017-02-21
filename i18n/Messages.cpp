@@ -20,17 +20,15 @@ Messages::Dictionary enENDictionary() {
   return r;
 };
 
-static Messages messages;
-
-std::string getMessage(const std::string& locale, const std::string& id) noexcept {
-  return messages.get(locale, id);
-}
-
 Messages::Messages() {
-  langToDictionary_["en_EN"] = std::unique_ptr<Dictionary>(new Dictionary(enENDictionary()));
+  addDictionary("en_EN", enENDictionary());
 }
 
-const std::string Messages::get(const std::string& locale, const std::string& id) const noexcept {
+void Messages::addDictionary(std::string&& name, Dictionary&& dictionary) noexcept {
+  langToDictionary_.insert(std::make_pair<std::string, Dictionary>(std::move(name), std::move(dictionary)));
+}
+
+const std::string& Messages::get(const std::string& locale, const std::string& id) const noexcept {
   auto itDict = langToDictionary_.find(locale);
 
   if (itDict == langToDictionary_.end()) {
@@ -38,11 +36,16 @@ const std::string Messages::get(const std::string& locale, const std::string& id
   }
 
   auto& dict = itDict->second;
-  auto word = dict->find(id);
+  auto word = dict.find(id);
 
-  if (word == dict->end()) {
+  if (word == dict.end()) {
     return id;
   } else {
     return word->second;
   }
+}
+
+const std::string& getMessage(const std::string& locale, const std::string& id) noexcept {
+  static Messages messages;
+  return messages.get(locale, id);
 }

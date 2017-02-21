@@ -16,12 +16,30 @@ public:
 
   Messages& operator=(Messages&&) = delete;
 
-  const std::string get(const std::string& locale, const std::string& id) const noexcept;
+  const std::string& get(const std::string& locale, const std::string& id) const noexcept;
+
 public:
-  using Dictionary = std::unordered_map<std::string, std::string>;
-  using DictionaryPtr = std::unique_ptr<Dictionary>;
+  class Dictionary : public std::unordered_map<std::string, std::string> {
+  public:
+    Dictionary() { ; }
+
+    Dictionary(const Dictionary&) = delete;
+
+    Dictionary& operator=(const Dictionary&) = delete;
+
+    Dictionary(Dictionary&&) = default;
+
+    Dictionary& operator=(Dictionary&&) = default;
+
+    virtual ~Dictionary() {
+      ;
+    }
+  };
 private:
-  std::unordered_map<std::string, DictionaryPtr> langToDictionary_;
+  void addDictionary(std::string&& name, Dictionary&& dictionary) noexcept;
+
+private:
+  std::unordered_map<std::string, Dictionary> langToDictionary_;
 };
 
-std::string getMessage(const std::string& locale, const std::string& id) noexcept;
+const std::string& getMessage(const std::string& locale, const std::string& id) noexcept;

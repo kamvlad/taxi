@@ -95,7 +95,7 @@ public:
       request->setStatus(HttpStatus::OK);
     } catch (const BusinessLogicException &e) {
       Document error;
-      error["error"] = getMessage(lang, e.what());
+      error["error"] = std::string(getMessage(lang, e.what()));
       error["errorCode"] = std::to_string(e.getCode());
       output << presentation->toString(error);
       request->setStatus(HttpStatus::OK);
